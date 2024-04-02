@@ -7,6 +7,8 @@ import org.springframework.stereotype.Repository;
 import java.util.UUID;
 
 @Repository
-public interface LoginRepository extends JpaRepository<User, UUID> {
+public interface UserRepository extends JpaRepository<User, UUID> {
     User findByUsernameAndPassword(String username, String password);
+
+    boolean existsByEmail(String email);
 }

@@ -9,7 +9,7 @@ import lombok.Data;
 import java.util.UUID;
 
 @Entity
-
+@Data
 public class User {
 
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -17,4 +17,6 @@ public class User {
     private UUID uuid;
     private String username;
     private String password;
+    private String email;
+    private boolean isVerified;
 }
