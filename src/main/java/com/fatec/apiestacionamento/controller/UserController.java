@@ -13,28 +13,47 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @Validated
-@RestController("/")
+@RestController()
+@RequestMapping("/user")
 public class UserController {
 
 
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-
     @Autowired
     private UserService userService;
 
-    @PostMapping("/login")
-    public String login(@Valid @RequestBody LoginRequestDTO request) {
-        // Implementação da lógica de login
-        return "Login realizado com sucesso!";
+    @GetMapping("/hello")
+    public String hello() {
+        userService.putValueInCache();
+        System.out.println(userService.getValueFromCache());
+        return "Hello, World!";
     }
+
+    @PostMapping("/login")
+    public ResponseEntity<String> login(@RequestBody LoginRequestDTO request) {
+        // Check if user exists
+        if (!userService.doesUserExistByEmail(request.getEmail())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found!");
+        }
+
+        // Authenticate user
+        if (!userService.authenticateUser(request.getEmail(), request.getPassword())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Incorrect password!");
+        }
+
+        // Login successful
+        return ResponseEntity.ok("Login realizado com sucesso!");
+    }
+
+
 
     @PostMapping("/register")
     public ResponseEntity<String> register(@Valid @RequestBody RegisterRequestDTO request) {
 
         if (userService.doesUserExistByEmail(request.getEmail())) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("User with this email already exists!");
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("User with this email already exists!");
         }
 
         // Encode the password
@@ -50,13 +69,21 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.CREATED).body("Registro realizado com sucesso!");
     }
 
-
-
-
-    @GetMapping("/auth/{email}")
+    @GetMapping("/redeem/{email}")
     public ResponseEntity<String> requestAuthenticationCode(@PathVariable String email) {
         // Generate and send a new authentication code
         userService.sendVerificationCode(email);
         return ResponseEntity.status(HttpStatus.OK).body("New authentication code sent to " + email);
+    }
+
+    @PostMapping("/auth/{email}")
+    public ResponseEntity<String> authenticate(@PathVariable String email, @RequestParam String code) {
+        if (userService.verifyVerificationCode(email, code)) {
+            // Update the user's verification status
+             userService.updateVerificationStatus(email, true);
+            return ResponseEntity.status(HttpStatus.OK).body("Authentication successful!");
+        } else {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid authentication code!");
+        }
     }
 }
